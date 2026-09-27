@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasbih — Counting Strand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cardo:wght@400;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14171b; --panel:#1c2126; --panel-2:#22282e;
+  --brass-dim:#4a4030; --brass-lit:#d9a24b; --brass-glow:#f0c169;
+  --marker:#8a3636; --marker-lit:#c65b5b;
+  --ivory:#ede7d9; --ivory-dim:#a8a196;
+  --jade:#4f9d86;
+  --radius:18px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--ink);color:var(--ivory);font-family:'Work Sans',sans-serif;height:100%;overflow:hidden;}
+body{height:100dvh;display:flex;justify-content:center;}
+.app{width:100%;max-width:430px;height:100dvh;display:flex;flex-direction:column;padding:16px 16px 10px;}
+.top{flex:0 0 auto;}
+.scroll{flex:1 1 auto;overflow-y:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;}
+.scroll::-webkit-scrollbar{width:4px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--panel-2);border-radius:4px;}
+
+/* dhikr chips */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;scrollbar-width:thin;}
+.chips::-webkit-scrollbar{height:4px;}
+.chips::-webkit-scrollbar-thumb{background:var(--panel-2);border-radius:4px;}
+.chip{flex:0 0 auto;background:var(--panel);border:1px solid #2a3138;color:var(--ivory-dim);
+  padding:8px 14px;border-radius:999px;font-size:13px;cursor:pointer;white-space:nowrap;transition:background .2s,color .2s,border-color .2s;}
+.chip.active{background:var(--brass-dim);color:var(--brass-glow);border-color:var(--brass-lit);}
+.chip.add{color:var(--jade);border-color:#2d4a42;}
+
+/* ring */
+.ring-wrap{position:relative;width:230px;height:230px;margin:0 auto;user-select:none;}
+.ring-wrap svg{width:100%;height:100%;overflow:visible;}
+.bead{transition:fill .25s,r .25s;}
+.bead.filled{fill:var(--brass-lit);}
+.marker{transition:fill .3s;}
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;}
+.count{font-family:'Cardo',serif;font-size:52px;line-height:1;color:var(--ivory);}
+.arabic{font-family:'Amiri',serif;font-size:19px;color:var(--brass-glow);margin-top:5px;direction:rtl;}
+.meaning{font-size:11px;color:var(--ivory-dim);margin-top:3px;max-width:170px;}
+
+.ring-wrap.pulse .bead.filled{fill:var(--brass-glow);}
+.ring-wrap.pulse .marker{fill:var(--marker-lit);}
+@keyframes flash{0%{filter:brightness(1);}50%{filter:brightness(1.5);}100%{filter:brightness(1);}}
+.ring-wrap.pulse svg{animation:flash .5s ease;}
+
+.tap-btn{display:block;width:100%;margin:14px 0 10px;padding:13px;border:none;border-radius:var(--radius);
+  background:var(--panel);color:var(--ivory);font-size:14px;font-weight:500;cursor:pointer;
+  border:1px solid #2a3138;transition:transform .08s,background .2s;}
+.tap-btn:active{transform:scale(.97);background:var(--panel-2);}
+
+.stats{display:flex;justify-content:space-between;padding:0 4px;font-size:11px;color:var(--ivory-dim);margin-bottom:10px;}
+.stats b{color:var(--ivory);font-weight:600;}
+
+.panel{background:var(--panel);border:1px solid #262c32;border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+.panel h3{margin:0 0 12px;font-size:13px;font-weight:500;color:var(--ivory-dim);}
+.target-row{display:flex;gap:8px;flex-wrap:wrap;}
+.target-opt{flex:1 1 auto;text-align:center;padding:9px 6px;border-radius:10px;background:var(--panel-2);
+  color:var(--ivory-dim);font-size:13px;cursor:pointer;border:1px solid transparent;min-width:52px;}
+.target-opt.active{color:var(--jade);border-color:#2d4a42;background:#1a2622;}
+.custom-target{width:64px;background:var(--panel-2);border:1px solid #2a3138;border-radius:10px;color:var(--ivory);
+  padding:9px 6px;text-align:center;font-size:13px;}
+
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:13px;color:var(--ivory-dim);}
+.switch{width:38px;height:22px;background:var(--panel-2);border-radius:20px;position:relative;cursor:pointer;flex:0 0 auto;border:1px solid #2a3138;}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--ivory-dim);transition:transform .18s,background .18s;}
+.switch.on{background:#1a2622;border-color:#2d4a42;}
+.switch.on::after{transform:translateX(16px);background:var(--jade);}
+
+.reset-link{display:block;text-align:center;margin-top:4px;font-size:12px;color:var(--ivory-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
+
+.history-bars{display:flex;gap:6px;align-items:flex-end;height:60px;margin-top:8px;}
+.hbar{flex:1;background:var(--panel-2);border-radius:4px 4px 0 0;position:relative;min-height:4px;}
+.hbar.today{background:var(--brass-dim);}
+.hbar-label{font-size:10px;color:var(--ivory-dim);text-align:center;margin-top:5px;}
+
+.add-form{display:flex;gap:6px;margin-top:10px;}
+.add-form input{flex:1;background:var(--panel-2);border:1px solid #2a3138;border-radius:10px;color:var(--ivory);padding:8px 10px;font-size:13px;}
+.add-form button{background:var(--jade);color:#0e1512;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="chips" id="chips"></div>
+
+    <div class="ring-wrap" id="ringWrap">
+      <svg viewBox="0 0 280 280"></svg>
+      <div class="center">
+        <div class="count" id="countDisplay">0</div>
+        <div class="arabic" id="arabicDisplay"></div>
+        <div class="meaning" id="meaningDisplay"></div>
+      </div>
+    </div>
+
+    <button class="tap-btn" id="tapBtn">Tap, click, or press space to count</button>
+    <div class="stats">
+      <span>Loop <b id="loopPos">0</b>/33</span>
+      <span>Cycle <b id="cycleCount">0</b></span>
+      <span>Today <b id="todayCount">0</b></span>
+      <span>Streak <b id="streakCount">0</b>d</span>
+    </div>
+  </div>
+
+  <div class="scroll">
+    <div class="panel">
+      <h3>Target for this session</h3>
+      <div class="target-row" id="targetRow"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Feedback</h3>
+      <div class="toggle-row">Vibration on each count<div class="switch" id="vibToggle"></div></div>
+      <div class="toggle-row">Soft click sound<div class="switch" id="soundToggle"></div></div>
+      <div class="reset-link" id="resetLink">Reset this session's count</div>
+    </div>
+
+    <div class="panel">
+      <h3>Add your own phrase</h3>
+      <div class="add-form">
+        <input id="customArabic" placeholder="Arabic (optional)">
+        <input id="customMeaning" placeholder="Meaning or transliteration">
+        <button id="addCustom">Add</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Last 7 days</h3>
+      <div class="history-bars" id="historyBars"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_DHIKR = [
+  {ar:'سُبْحَانَ اللَّهِ', en:'Glory be to God', target:33},
+  {ar:'الْحَمْدُ لِلَّهِ', en:'Praise be to God', target:33},
+  {ar:'اللَّهُ أَكْبَرُ', en:'God is greatest', target:34},
+  {ar:'أَسْتَغْفِرُ اللَّهَ', en:'I seek God\'s forgiveness', target:100},
+  {ar:'لَا إِلَٰهَ إِلَّا اللَّهُ', en:'There is no god but God', target:100},
+  {ar:'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ', en:'No power except with God', target:33},
+];
+const store = JSON.parse(localStorage.getItem('tasbih_v1') || 'null') || {
+  custom:[], selected:0, count:0, target:33, vib:true, sound:true, history:{}
+};
+function save(){ localStorage.setItem('tasbih_v1', JSON.stringify(store)); }
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+function allDhikr(){ return DEFAULT_DHIKR.concat(store.custom); }
+
+let audioCtx;
+function click(){
+  if(!store.sound) return;
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sine'; o.frequency.value=520;
+    g.gain.setValueAtTime(0.06, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.09);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+0.09);
+  }catch(e){}
+}
+
+function renderChips(){
+  const el = document.getElementById('chips');
+  el.innerHTML='';
+  allDhikr().forEach((d,i)=>{
+    const c=document.createElement('div');
+    c.className='chip'+(i===store.selected?' active':'');
+    c.textContent=d.en;
+    c.onclick=()=>{ store.selected=i; store.count=0; store.target=d.target; save(); renderAll(); };
+    el.appendChild(c);
+  });
+}
+
+function renderTargets(){
+  const opts=[33,99,100];
+  const row=document.getElementById('targetRow'); row.innerHTML='';
+  opts.forEach(t=>{
+    const o=document.createElement('div');
+    o.className='target-opt'+(store.target===t?' active':'');
+    o.textContent=t; o.onclick=()=>{ store.target=t; save(); renderAll(); };
+    row.appendChild(o);
+  });
+  const custom=document.createElement('input');
+  custom.className='custom-target'; custom.type='number'; custom.placeholder='custom';
+  custom.value = opts.includes(store.target)?'':store.target;
+  custom.onchange=()=>{ const v=parseInt(custom.value); if(v>0){ store.target=v; save(); renderAll(); } };
+  row.appendChild(custom);
+}
+
+function renderRing(){
+  const svg = document.querySelector('#ringWrap svg');
+  svg.innerHTML='';
+  const cx=140, cy=140, r=112, n=33;
+  const pos = store.count===0 ? 0 : ((store.count-1)%33)+1;
+  for(let i=0;i<n;i++){
+    const a = -Math.PI/2 + i*(2*Math.PI/n);
+    const x = cx + r*Math.cos(a), y = cy + r*Math.sin(a);
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',7);
+    c.setAttribute('class','bead'+(i<pos?' filled':''));
+    c.setAttribute('fill','var(--brass-dim)');
+    svg.appendChild(c);
+  }
+  const m = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  m.setAttribute('cx',cx); m.setAttribute('cy',cy-r-15); m.setAttribute('r',9);
+  m.setAttribute('class','marker'); m.setAttribute('fill','var(--marker)');
+  svg.appendChild(m);
+}
+
+function renderCenter(){
+  const d = allDhikr()[store.selected];
+  document.getElementById('countDisplay').textContent = store.count;
+  document.getElementById('arabicDisplay').textContent = d.ar || '';
+  document.getElementById('meaningDisplay').textContent = d.en;
+  document.getElementById('loopPos').textContent = store.count===0?0:((store.count-1)%33)+1;
+  document.getElementById('cycleCount').textContent = Math.floor(store.count/store.target) || (store.count>=store.target?1:0);
+  document.getElementById('todayCount').textContent = store.history[todayKey()] || 0;
+}
+
+function computeStreak(){
+  let streak=0, d=new Date();
+  while(true){
+    const key=d.toISOString().slice(0,10);
+    if((store.history[key]||0) > 0){ streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  return streak;
+}
+
+function renderHistory(){
+  const el = document.getElementById('historyBars');
+  el.innerHTML='';
+  const days=[]; const today=new Date();
+  for(let i=6;i>=0;i--){ const d=new Date(today); d.setDate(d.getDate()-i); days.push(d); }
+  const max = Math.max(1,...days.map(d=>store.history[d.toISOString().slice(0,10)]||0));
+  days.forEach(d=>{
+    const key=d.toISOString().slice(0,10);
+    const val=store.history[key]||0;
+    const wrap=document.createElement('div'); wrap.style.flex='1'; wrap.style.textAlign='center';
+    const bar=document.createElement('div');
+    bar.className='hbar'+(key===todayKey()?' today':'');
+    bar.style.height=Math.max(4,(val/max)*54)+'px';
+    const label=document.createElement('div'); label.className='hbar-label';
+    label.textContent='SMTWTFS'[d.getDay()];
+    wrap.appendChild(bar); wrap.appendChild(label);
+    el.appendChild(wrap);
+  });
+  document.getElementById('streakCount').textContent = computeStreak();
+}
+
+function renderToggles(){
+  document.getElementById('vibToggle').className='switch'+(store.vib?' on':'');
+  document.getElementById('soundToggle').className='switch'+(store.sound?' on':'');
+}
+
+function renderAll(){
+  renderChips(); renderTargets(); renderRing(); renderCenter(); renderHistory(); renderToggles();
+}
+
+function tap(){
+  store.count++;
+  const key=todayKey();
+  store.history[key]=(store.history[key]||0)+1;
+  click();
+  if(store.vib && navigator.vibrate) navigator.vibrate(12);
+  const wrap=document.getElementById('ringWrap');
+  const loopDone = store.count%33===0;
+  const targetDone = store.count===store.target;
+  if(loopDone || targetDone){
+    wrap.classList.add('pulse');
+    if(store.vib && navigator.vibrate) navigator.vibrate(targetDone?[30,40,30,40,60]:[20,30,20]);
+    setTimeout(()=>wrap.classList.remove('pulse'),500);
+  }
+  save(); renderAll();
+}
+
+document.getElementById('tapBtn').onclick = tap;
+document.getElementById('ringWrap').onclick = tap;
+document.getElementById('vibToggle').onclick = ()=>{ store.vib=!store.vib; save(); renderToggles(); };
+document.getElementById('soundToggle').onclick = ()=>{ store.sound=!store.sound; save(); renderToggles(); };
+document.getElementById('resetLink').onclick = ()=>{ store.count=0; save(); renderAll(); };
+document.getElementById('addCustom').onclick = ()=>{
+  const ar=document.getElementById('customArabic').value.trim();
+  const en=document.getElementById('customMeaning').value.trim();
+  if(!en) return;
+  store.custom.push({ar, en, target:33});
+  store.selected = allDhikr().length; // placeholder, corrected below
+  document.getElementById('customArabic').value='';
+  document.getElementById('customMeaning').value='';
+  save();
+  store.selected = DEFAULT_DHIKR.length + store.custom.length - 1;
+  save(); renderAll();
+};
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); tap(); }
+  if(e.key==='r'||e.key==='R'){ store.count=0; save(); renderAll(); }
+});
+
+renderAll();
+</script>
+</body>
+</html>
